@@ -7,6 +7,8 @@ from numpy.testing import assert_allclose
 
 import sncosmo
 from sncosmo import Bandpass
+from sncosmo.bandpasses import (
+    BandpassInterpolator, _BANDPASSES, _BANDPASS_INTERPOLATORS)
 from sncosmo.tests.test_salt2source import read_header
 
 
@@ -90,6 +92,74 @@ def test_bandpass_bessell():
 def test_aggregate_bandpass_name():
     b = sncosmo.AggregateBandpass([([1000., 2000.], [1., 1.])])
     assert repr(b).startswith("<AggregateBandpass")
+
+
+def test_builtin_bandpass_names_are_namespaced():
+    for registry in (_BANDPASSES, _BANDPASS_INTERPOLATORS):
+        assert all("::" in meta["name"]
+                   for meta in registry.get_loaders_metadata())
+
+
+@pytest.mark.parametrize(("legacy", "canonical"), [
+    ("bessellb", "bessell::b"),
+    ("desg", "des::g"),
+    ("sdssg", "sdss::g"),
+    ("f606w", "acs-wfc::f606w"),
+    ("nicf110w", "nicmos2::f110w"),
+    ("f110w", "wfc3-ir::f110w"),
+    ("uvf606w", "wfc3-uvis::f606w"),
+    ("kepler", "kepler::kp"),
+    ("cspb", "swope2::b"),
+    ("csphd", "dupont::h"),
+    ("f070w", "jwst-nircam::f070w"),
+    ("f560w", "jwst-miri::f560w"),
+    ("lsstg", "lsst::g"),
+    ("f062", "roman-wfi::f062"),
+    ("euclidy", "euclid-nisp::y"),
+    ("ztfg", "ztf::g"),
+    ("atlasc", "atlas::c"),
+    ("2massj", "2mass::j"),
+    ("tess", "tess::red"),
+    ("gotol", "goto::l"),
+    ("skymapperg", "skymapper::g"),
+])
+def test_builtin_bandpass_aliases(legacy, canonical):
+    assert (_BANDPASSES._loaders[(legacy, None)] ==
+            _BANDPASSES._loaders[(canonical, None)])
+
+
+def test_builtin_bandpass_interpolator_aliases():
+    assert (_BANDPASS_INTERPOLATORS._loaders[("ultrasat", None)] ==
+            _BANDPASS_INTERPOLATORS._loaders[("ultrasat::nuv", None)])
+
+
+def test_general_bandpass_arguments(monkeypatch):
+    class DummyInterpolator:
+        wavegrid = np.array([4000., 5000.])
+
+        def eval_at(self, x, y, sensor_id, wave, filter_frame=False):
+            assert filter_frame
+            return np.ones((1, len(wave)))
+
+    interp = DummyInterpolator()
+    monkeypatch.setattr(_BANDPASS_INTERPOLATORS, "retrieve",
+                        lambda name: interp)
+
+    band = sncosmo.get_bandpass("dummy::g", filter_frame=True)
+    assert isinstance(band, Bandpass)
+
+    with pytest.raises(TypeError, match="positional arguments"):
+        sncosmo.get_bandpass("dummy::g", 1.)
+
+
+def test_bandpass_interpolator_maxpos():
+    interp = BandpassInterpolator(
+        [],
+        [(0., [4000., 5000.], [0., 0.]),
+         (1., [4000., 5000.], [1., 1.])])
+
+    band = interp.at(interp.maxpos())
+    assert_allclose(band([4000., 5000.]), [1., 1.])
 
 
 @pytest.mark.might_download

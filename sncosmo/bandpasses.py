@@ -92,7 +92,7 @@ def get_bandpass(name, *args, **kwargs):
     Examples
     --------
     Basic usage with a static Bandpass:
-    >>> bandpass = get_bandpass('ztfg')
+    >>> bandpass = get_bandpass("ztf::g")
 
     Using a radial Bandpass with a specific radius:
     >>> radial_bandpass = get_bandpass('megacampsf::r', radius=1.2)
@@ -141,8 +141,12 @@ def get_bandpass(name, *args, **kwargs):
 
     # general case (e.g. ZTF, MegaCam, HSC), at this point `interp` is an
     # instance of GeneralBandpassInterpolator
+    if args:
+        raise TypeError('positional arguments are only supported for '
+                        'radially variable bandpasses')
+
     unexpected_kwargs = set(
-        kwargs.keys() - {'x', 'y', 'sensor_id', 'wave'})
+        kwargs.keys() - {'x', 'y', 'sensor_id', 'wave', 'filter_frame'})
     if unexpected_kwargs:
         raise TypeError(
             'unexpected keyword arguments {}'.format(
@@ -562,7 +566,7 @@ class BandpassInterpolator(object):
     def at(self, pos):
         """Return the bandpass at the given position"""
 
-        if pos < self.minpos() or pos >= self.maxpos():
+        if pos < self.minpos() or pos > self.maxpos():
             raise ValueError("Position outside bounds")
 
         # find index such that t[i-1] <= pos < t[i]

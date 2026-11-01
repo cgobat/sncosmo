@@ -9,12 +9,13 @@ Bandpass objects represent the transmission fraction of an
 astronomical filter as a function of dispersion (photon wavelength,
 frequency or energy). They are basically simple containers for arrays of these
 values, with a couple special features. To get a bandpass that is in
-the registry (built-in)::
+the registry (built-in). Built-in bandpasses use names of the form
+``instrument::band``; historical names remain available as aliases::
 
     >>> import sncosmo
-    >>> band = sncosmo.get_bandpass('sdssi')
+    >>> band = sncosmo.get_bandpass("sdss::i")
     >>> band
-    <Bandpass 'sdssi' at 0x...>
+    <Bandpass 'sdss::i' at 0x...>
 
 To create a Bandpass directly, you can supply arrays of wavelength and
 transmission values:
